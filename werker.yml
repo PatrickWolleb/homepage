@@ -1,0 +1,30 @@
+box: 
+build:    
+  steps:
+    - script:
+        name: install front end dependencies via bower
+        code: bower install
+    - npm-test
+    - script:
+        name: build with grunt
+        code: grunt build
+
+deploy:
+  steps:
+    - script:
+        name: read version
+        code: BUILD_VERSION=v$(node -pe 'JSON.parse(require("fs").readFileSync("package.json")).version')
+    - wercker/s3sync@1.2.0:
+        key-id: $AWSAccessKeyId
+        key-secret: $AWSSecretKey
+        bucket-url: s3://ocean8-production/$BUILD_VERSION/
+        source-dir: $BUILD_VERSION/public
+        opts: --acl-public
+    - patrickwolleb/elastic-beanstalk-deploy@2.1.1:
+        key: $AWSAccessKeyId
+        secret: $AWSSecretKey
+        app_name: ocean8
+        sub_directory: $BUILD_VERSION
+        commit_message : $WERCKER_GIT_COMMIT
+        env_name: ocean8-production
+        region: eu-west-1
